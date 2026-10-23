@@ -1,0 +1,23 @@
+      - name: Build APK
+        run: |
+          chmod +x gradlew
+          set -o pipefail
+          ./gradlew assembleRelease --no-daemon --stacktrace 2>&1 | tee build.log
+
+      - name: Show build error
+        if: failure()
+        run: |
+          {
+            echo "### Ошибка сборки — скопируйте этот текст"
+            echo '```'
+            grep -i -E "error:|CMake Error|What went wrong|FAILED|undefined reference|cannot find symbol|Could not|not found" build.log | grep -v "^\s*at " | head -40 || true
+            echo "-----"
+            awk '/What went wrong/{f=1} f{print; n++} n>30{exit}' build.log || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: build-log
+          path: build.log
